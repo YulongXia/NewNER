@@ -41,9 +41,11 @@ class productNER(abstract):
                     {
                         "realStart":xxx,
                         "realEnd":yyy,
-                        "entity":["",""],
+                        "standard":["",""],
+                        "entity": zzz,
                         "name":"time",
-                        "sn":"xxx"
+                        "sn":"xxx",
+                        "segments":["","",""],
                     }
                 ]
             },
@@ -130,7 +132,7 @@ if __name__ == "__main__":
                     {
                         "realStart":"6",
                         "realEnd":"9",
-                        "standard":"3年交",
+                        "standard":["3年"],
                         "name":"time",
                         "sn":"time-reg"
                     }
@@ -141,21 +143,21 @@ if __name__ == "__main__":
                     {
                         "realStart":"0",
                         "realEnd":"2",
-                        "standard":"泰康",
+                        "standard":["泰康"],
                         "name":"time",
                         "sn":"time-reg"
                     },
                     {
                         "realStart":"1",
                         "realEnd":"2",
-                        "standard":"泰康",
+                        "standard":["泰康"],
                         "name":"time",
                         "sn":"time-reg"
                     },
                     {
                         "realStart":"0",
                         "realEnd":"1",
-                        "standard":"泰康",
+                        "standard":["泰康"],
                         "name":"time",
                         "sn":"time-reg"
                     }

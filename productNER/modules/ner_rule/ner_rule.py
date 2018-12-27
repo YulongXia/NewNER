@@ -60,12 +60,12 @@ class ner_rule(object):
         guess = []
         heads,tails,flag,kernel_idx = self.search(segments,start,end)
         guess.append([heads,tails,flag,kernel_idx])
-        self.post_processing(segments=segments,heads=heads,tails=tails,flag=flag,kernel_idx=kernel_idx,ambiguous_suffix=self.resources["ambiguous_suffix"],tail_puls_one_patterns=self.resources["tail_puls_one_patterns"],tmp=tmp,entity_link_info=entity_link_info,invalid_single_word_as_entity=self.resources["invalid_single_word_as_entity"],skips=self.resources["skips"],ambiguous_prefix=self.resources["ambiguous_prefix"])
+        self.post_processing(segments=segments,heads=heads,tails=tails,flag=flag,kernel_idx=kernel_idx,ambiguous_suffix=self.resources["ambiguous_suffix"],tail_plus_one_patterns=self.resources["tail_plus_one_patterns"],tmp=tmp,entity_link_info=entity_link_info,invalid_single_word_as_entity=self.resources["invalid_single_word_as_entity"],skips=self.resources["skips"],tail_minus_one_and_tail_stop_patterns=self.resources["tail_minus_one_and_tail_stop_patterns"],        tail_minus_one_and_tail_cut_tail_patterns=self.resources["tail_minus_one_and_tail_cut_tail_patterns"],ambiguous_prefix=self.resources["ambiguous_prefix"])
         while len(tails) > 0 and max(tails) < end:
             start = max(tails) + 1
             heads,tails,flag,kernel_idx = self.search(segments,start,end)
             guess.append([heads,tails,flag,kernel_idx])
-            self.post_processing(segments=segments,heads=heads,tails=tails,flag=flag,kernel_idx=kernel_idx,ambiguous_suffix=self.resources["ambiguous_suffix"],tail_puls_one_patterns=self.resources["tail_puls_one_patterns"],tmp=tmp,entity_link_info=entity_link_info,invalid_single_word_as_entity=self.resources["invalid_single_word_as_entity"],skips=self.resources["skips"],ambiguous_prefix=self.resources["ambiguous_prefix"])    
+            self.post_processing(segments=segments,heads=heads,tails=tails,flag=flag,kernel_idx=kernel_idx,ambiguous_suffix=self.resources["ambiguous_suffix"],tail_plus_one_patterns=self.resources["tail_plus_one_patterns"],tmp=tmp,entity_link_info=entity_link_info,invalid_single_word_as_entity=self.resources["invalid_single_word_as_entity"],skips=self.resources["skips"],tail_minus_one_and_tail_stop_patterns=self.resources["tail_minus_one_and_tail_stop_patterns"],        tail_minus_one_and_tail_cut_tail_patterns=self.resources["tail_minus_one_and_tail_cut_tail_patterns"],ambiguous_prefix=self.resources["ambiguous_prefix"])    
         if len(guess) > 1:
             # sorted by kernel_idx
             guess = sorted(guess,key=lambda x:x[3] if x[2] else 99999999 )
@@ -81,7 +81,7 @@ class ner_rule(object):
             if idx_guess >= 2 and part in all_string:
                 heads = guess[0][0]
                 tails = guess[idx_guess - 1][1]
-                self.post_processing(segments=segments,heads=heads,tails=tails,flag="guess",kernel_idx=[guess[0][3],guess[idx_guess - 1][3]],ambiguous_suffix=self.resources["ambiguous_suffix"],tail_puls_one_patterns=self.resources["tail_puls_one_patterns"],tmp=tmp,entity_link_info=entity_link_info,invalid_single_word_as_entity=self.resources["invalid_single_word_as_entity"],skips=self.resources["skips"],ambiguous_prefix=self.resources["ambiguous_prefix"])
+                self.post_processing(segments=segments,heads=heads,tails=tails,flag="guess",kernel_idx=[guess[0][3],guess[idx_guess - 1][3]],ambiguous_suffix=self.resources["ambiguous_suffix"],tail_plus_one_patterns=self.resources["tail_plus_one_patterns"],tmp=tmp,entity_link_info=entity_link_info,invalid_single_word_as_entity=self.resources["invalid_single_word_as_entity"],skips=self.resources["skips"],tail_minus_one_and_tail_stop_patterns=self.resources["tail_minus_one_and_tail_stop_patterns"],        tail_minus_one_and_tail_cut_tail_patterns=self.resources["tail_minus_one_and_tail_cut_tail_patterns"],ambiguous_prefix=self.resources["ambiguous_prefix"])
         candidates = OrderedDict()
         for one in entity_link_info:
             for entity,info in one.items():
@@ -127,12 +127,14 @@ class ner_rule(object):
         flag = kwargs["flag"]
         kernel_idx = kwargs["kernel_idx"]
         ambiguous_suffix = kwargs["ambiguous_suffix"]
-        tail_puls_one_patterns = kwargs["tail_puls_one_patterns"]
+        tail_plus_one_patterns = kwargs["tail_plus_one_patterns"]
         tmp = kwargs["tmp"]
         entity_link_info = kwargs["entity_link_info"]
         invalid_single_word_as_entity = kwargs["invalid_single_word_as_entity"]
         skips = kwargs["skips"]
         ambiguous_prefix = kwargs["ambiguous_prefix"]
+        tail_minus_one_and_tail_stop_patterns = kwargs["tail_minus_one_and_tail_stop_patterns"]
+        tail_minus_one_and_tail_cut_tail_patterns = kwargs["tail_minus_one_and_tail_cut_tail_patterns"]
         kernel_word = ""
         if flag == True:
             kernel_word = segments[kernel_idx]
@@ -164,14 +166,14 @@ class ner_rule(object):
                         tail = tail - 1
                         n += 1
                     # e康豁免保险费疾病重大疾病豁免保险费责任
-                    if tail - head >= 2 and re.compile("(^保(高残|意外|被保险人|终身|重大疾病|轻症))|((轻症|重大疾病|高残)(疾病|豁免))").match("".join(segments[tail-1:tail+1])) is not None:
+                    if tail - head >= 2 and sum([re.compile(pattern).match("".join(segments[tail-1:tail+1])) is not None for pattern in tail_minus_one_and_tail_stop_patterns]) >= 1 :
                         tail = tail - 2
                         n += 1
-                    if tail - head >= 2 and re.compile("(^保险(意外|年金|高残|轻症|疾病|重疾|航空意外|重大疾病|长期护理))").match("".join(segments[tail-1:tail+1])) is not None:
+                    if tail - head >= 2 and sum([re.compile(pattern).match("".join(segments[tail-1:tail+1])) is not None for pattern in tail_minus_one_and_tail_cut_tail_patterns]) >= 1:
                         tail = tail - 1
                         n += 1
                     s = "".join(segments[tail:tail+2])
-                    if len([True for pattern in tail_puls_one_patterns if pattern.match(s) is not None]) != 0:
+                    if len([True for pattern in tail_plus_one_patterns if pattern.match(s) is not None]) != 0:
                         tail = tail - 1
                         n += 1
                     if n == 0:
@@ -485,10 +487,20 @@ class ner_rule(object):
              re.compile(r"^[0-9]+\s*(年(?<!金))?(\d+月?)?(\d+(日(?<!额)|号)?)?((以|之)?(前|后))?$"),
              re.compile(r"^[0-9]+\s*(年(领)?)?$")
            ]
-        ambiguous_prefix = ["豁免","附加"]
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"resources/detail/ambiguous_prefix.txt"),"r",encoding="utf-8") as f:
+            ambiguous_prefix = [w.strip() for w in f.readlines() if len(w.strip()) != 0 and not w.strip().startswith("#") ]
 
-        ambiguous_suffix = ["身故","投保人","附加","投保人身故","住院","定期","豁免","重疾","意外","条款","轻症","重大疾病","意外伤害","重疾险","年金","年金转换","高残","投保人意外","基本","残疾","电销","恶性肿瘤","分红","附加险","豁免保费","豁免保险费","疾病","疾病住院","交通意外","万能","万能账户","医疗","银行","长期护理","肿瘤","住院津贴","住院医疗","医疗保险金"]
-        tail_puls_one_patterns = [re.compile(r"(\d|([1-9]\d)|(\d{3})|([03456789]\d{3})|(\d{5,}))(可|能)"),re.compile(r"\d+\%"),re.compile(r"\d+(种)"),re.compile(r"\d+(周|虚)?岁"),re.compile(r"\d+(万|千|百)"),re.compile(r"\d+(天|月|年)内?"),re.compile(r"\d+(年|月)交?"),re.compile("(^保(我|吗|么|哪|那|的|多|到|多少|几|什么|大病|疾病|残疾|{}))|(^险种$)|^(分红)(型?期|如何|怎|可|可以)|^(意外)(类型)|^(投连|重疾|医疗)类".format("|".join(ambiguous_suffix))),re.compile("^(银行)(可以|能|能否|有|销售)"),re.compile(r"^费用收取")]
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"resources/detail/ambiguous_suffix.txt"),"r",encoding="utf-8") as f:
+            ambiguous_suffix = [w.strip() for w in f.readlines() if len(w.strip()) != 0 and not w.strip().startswith("#") ]
+
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"resources/detail/tail_plus_one_patterns.txt"),"r",encoding="utf-8") as f:
+            tail_plus_one_patterns = [ re.compile(pattern) for pattern in f.readlines() if len(pattern.strip()) != 0 ]
+
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"resources/detail/tail_minus_one_and_tail_stop_patterns.txt"),"r",encoding="utf-8") as f:
+            tail_minus_one_and_tail_stop_patterns = [ pattern for pattern in f.readlines() if len(pattern.strip()) != 0 ]
+
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"resources/detail/tail_minus_one_and_tail_cut_tail_patterns.txt"),"r",encoding="utf-8") as f:
+            tail_minus_one_and_tail_cut_tail_patterns = [ pattern for pattern in f.readlines() if len(pattern.strip()) != 0 ]
 
         mytrie = marisa_trie.Trie([u'险'])
 
@@ -508,7 +520,9 @@ class ner_rule(object):
                     "patterns":patterns,
                     "ambiguous_prefix":ambiguous_prefix,
                     "ambiguous_suffix":ambiguous_suffix,
-                    "tail_puls_one_patterns":tail_puls_one_patterns,
+                    "tail_plus_one_patterns":tail_plus_one_patterns,
+                    "tail_minus_one_and_tail_stop_patterns":tail_minus_one_and_tail_stop_patterns,
+                    "tail_minus_one_and_tail_cut_tail_patterns":tail_minus_one_and_tail_cut_tail_patterns,
                     "mytrie":mytrie,
                 }
 
