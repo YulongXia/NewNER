@@ -162,8 +162,10 @@ if __name__ == "__main__":
                         "sn":"time-reg"
                     }
                 ]}
+    txt = "卓越人生2007年2月"
     p = productNER(txt)
-    print(json.dumps(p.recognize(ner_json,ner_json1),ensure_ascii=False))
+    # print(json.dumps(p.recognize(ner_json,ner_json1),ensure_ascii=False))
+    print(json.dumps(p.recognize(),ensure_ascii=False))
 
 
     # df = pd.read_excel("input/标注问题_taikang_952_760entity_corpus.xlsx")

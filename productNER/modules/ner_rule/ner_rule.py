@@ -61,6 +61,7 @@ class ner_rule(object):
         heads,tails,flag,kernel_idx = self.search(segments,start,end)
         guess.append([heads,tails,flag,kernel_idx])
         self.post_processing(segments=segments,heads=heads,tails=tails,flag=flag,kernel_idx=kernel_idx,ambiguous_suffix=self.resources["ambiguous_suffix"],tail_plus_one_patterns=self.resources["tail_plus_one_patterns"],tmp=tmp,entity_link_info=entity_link_info,invalid_single_word_as_entity=self.resources["invalid_single_word_as_entity"],skips=self.resources["skips"],tail_minus_one_and_tail_stop_patterns=self.resources["tail_minus_one_and_tail_stop_patterns"],        tail_minus_one_and_tail_cut_tail_patterns=self.resources["tail_minus_one_and_tail_cut_tail_patterns"],ambiguous_prefix=self.resources["ambiguous_prefix"])
+        k = max(tails)
         while len(tails) > 0 and max(tails) < end:
             start = max(tails) + 1
             heads,tails,flag,kernel_idx = self.search(segments,start,end)
@@ -70,7 +71,7 @@ class ner_rule(object):
             # sorted by kernel_idx
             guess = sorted(guess,key=lambda x:x[3] if x[2] else 99999999 )
             # sorted by flag in descend order e.g.[True,True,False]
-            guess = sorted(guess,key=lambda x:x[2],reverse=True)
+            # guess = sorted(guess,key=lambda x:x[2],reverse=True)
             # /19/20/
             all_string = "/" + "/".join([str(i) for i in range(len(segments))]) + "/"
             part = "/"
@@ -152,7 +153,7 @@ class ner_rule(object):
                 ending_label = False
                 while not ending_label:
                     n = 0
-                    if  tail - head >= 1 and segments[head + 1] in segments[head]:
+                    if  tail - head >= 1 and segments[head] in segments[head+1]:
                         head = head + 1
                         n += 1
                     if tail - head >= 1 and segments[tail] in segments[tail-1]:
@@ -173,7 +174,7 @@ class ner_rule(object):
                         tail = tail - 1
                         n += 1
                     s = "".join(segments[tail:tail+2])
-                    if len([True for pattern in tail_plus_one_patterns if pattern.match(s) is not None]) != 0:
+                    if tail < len(segments) -1 and len([True for pattern in tail_plus_one_patterns if pattern.match(s) is not None]) != 0:
                         tail = tail - 1
                         n += 1
                     if n == 0:
@@ -184,17 +185,22 @@ class ner_rule(object):
                     real_tail = tail
                     for it in range(head,tail+1):
                         if re.compile(r"^[,，.。?？!！、]$").match(segments[it]) is not None:
-                            if flag:
+                            if flag == True:
                                 if it > kernel_idx and it <= real_tail:
                                     real_tail = it - 1
                                 elif it < kernel_idx and it >= real_head:
+                                    real_head = it + 1
+                            elif flag == "guess":
+                                if it > kernel_idx[1] and it <= real_tail:
+                                    real_tail = it - 1
+                                elif it < kernel_idx[0] and it >= real_head:
                                     real_head = it + 1
                             else:
                                 if it <= real_tail:
                                     real_tail = it - 1
                     if real_tail == real_head and segments[real_head] in invalid_single_word_as_entity:
                         continue
-                    entity = "".join(segments[real_head:real_tail+1])
+                    
                     if real_tail >= real_head:
                         real_head,real_tail = self.remove_invalid_brackets(segments,real_head,real_tail)
                         entity = "".join(segments[real_head:real_tail+1])
@@ -425,9 +431,11 @@ class ner_rule(object):
                 loc = None
                 # 避免 2007年金 --> 2007年/金
                 if len(segments[idx]) > 1 and re.compile(r"^年金").match(segments[idx]) is  None:
+                    tmpstr = "".join(segments[start:idx])
                     for i in range(len(segments[idx])):
                         s = segments[idx][i]
-                        if len([ True for pattern in self.resources["patterns"] if pattern.match("".join(segments[start:idx]) + s ) is not None ] ) == 0:
+                        tmpstr += s
+                        if len([ True for pattern in self.resources["patterns"] if pattern.match(tmpstr) is not None ] ) == 0:
                             loc = i
                             break
                 if loc is not None and loc != 0:
@@ -479,7 +487,7 @@ class ner_rule(object):
         backward += limited + plans
         whole_without_kernel = list(set(prefix + limited + plans + suffix))
         invalid_single_word_as_entity = list(set(prefix + limited + suffix))
-        skips = r".!/_,$%^*()?;；:-【】\"'\[\]——！，;:。？、~@#￥%……&*（）《》"
+        skips = r".!/_,$%^*()?;；:-【】\"'[]——！，;:。？、~@#￥%……&*（）《》"
         patterns = [ 
              re.compile(r"^[A-Za-z]+\+{0,1}\s*款{0,1}$"),
              re.compile(r"^[一二三四五六七八九零〇]+\s*号{0,1}$"),
@@ -494,13 +502,13 @@ class ner_rule(object):
             ambiguous_suffix = [w.strip() for w in f.readlines() if len(w.strip()) != 0 and not w.strip().startswith("#") ]
 
         with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"resources/detail/tail_plus_one_patterns.txt"),"r",encoding="utf-8") as f:
-            tail_plus_one_patterns = [ re.compile(pattern) for pattern in f.readlines() if len(pattern.strip()) != 0 ]
+            tail_plus_one_patterns = [ re.compile(pattern.strip()) for pattern in f.readlines() if len(pattern.strip()) != 0 ]
 
         with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"resources/detail/tail_minus_one_and_tail_stop_patterns.txt"),"r",encoding="utf-8") as f:
-            tail_minus_one_and_tail_stop_patterns = [ pattern for pattern in f.readlines() if len(pattern.strip()) != 0 ]
+            tail_minus_one_and_tail_stop_patterns = [ pattern.strip() for pattern in f.readlines() if len(pattern.strip()) != 0 ]
 
         with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),"resources/detail/tail_minus_one_and_tail_cut_tail_patterns.txt"),"r",encoding="utf-8") as f:
-            tail_minus_one_and_tail_cut_tail_patterns = [ pattern for pattern in f.readlines() if len(pattern.strip()) != 0 ]
+            tail_minus_one_and_tail_cut_tail_patterns = [ pattern.strip() for pattern in f.readlines() if len(pattern.strip()) != 0 ]
 
         mytrie = marisa_trie.Trie([u'险'])
 

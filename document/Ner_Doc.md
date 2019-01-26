@@ -1,6 +1,10 @@
 ## Ner 模块说明
 ### 1. 整体框架
-本节描述整个NER大模块的框架，如下图:
+本节描述整个NER大模块的框架，
+#### a.未来在labrador_algo的框架,如下图
+
+![Labrador_NER_FRAMEWORK](picture/NerFrameworkInlabrador.jpg)
+#### b.当前python实现的框架,如下图:
 
 ![NER_FRAMEWORK](picture/NER_Framework.jpg)
 
@@ -124,7 +128,7 @@ tail_minus_one_and_tail_cut_tail_pattern: 正则，后缀词前一个词和后�
 
 tail_minus_one_and_tail_stop_pattern: 正则,后缀词前一个词和后缀词满足此正则，会把后缀词和后缀词前一个全部去掉，例如： 泰康祥云保重大疾病吗? 按照算法，会识别出"泰康祥云保重大疾病",但明显这个应该是"泰康祥云"。
 
-tail_plus_one_patterns: 正则，正则，后缀词和后缀词后一个词满足此正则，会把后缀词去掉，例如： 泰康祥云保什么吗? 按照算法，会识别出"泰康祥云保",但明显这个应该是"泰康祥云"。
+tail_plus_one_patterns: 正则，后缀词和后缀词后一个词满足此正则，会把后缀词去掉，例如： 泰康祥云保什么吗? 按照算法，会识别出"泰康祥云保",但明显这个应该是"泰康祥云"。
 
 #### 2.4 现状与改进
 
